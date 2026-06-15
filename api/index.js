@@ -43,5 +43,8 @@ if (process.env.NODE_ENV !== "production") {
     console.log("Server running on port 3000");
   });
 }
-
+app.use(
+  "/analytics",
+  require("../src/routes/analyticsRoutes")
+);
 module.exports = app;
