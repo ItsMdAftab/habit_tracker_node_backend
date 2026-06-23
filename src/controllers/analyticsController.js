@@ -143,7 +143,9 @@ exports.getMonthlyTrend = async (req, res) => {
 };
 
 exports.getRecords = async (req, res) => {
+
   try {
+
     const prayerResult = await pool.query(
       "SELECT * FROM prayer_records ORDER BY prayer_date"
     );
@@ -153,6 +155,7 @@ exports.getRecords = async (req, res) => {
     );
 
     const prayers = prayerResult.rows;
+
     const gyms = gymResult.rows;
 
     let highestPrayerStreak = 0;
@@ -164,6 +167,7 @@ exports.getRecords = async (req, res) => {
     let totalPrayers = 0;
 
     prayers.forEach((record) => {
+
       let completed = 0;
 
       if (record.fajr) completed++;
@@ -175,33 +179,49 @@ exports.getRecords = async (req, res) => {
       totalPrayers += completed;
 
       if (completed === 5) {
+
         tempPrayerStreak++;
 
         highestPrayerStreak = Math.max(
           highestPrayerStreak,
           tempPrayerStreak
         );
+
       } else {
+
         tempPrayerStreak = 0;
+
       }
+
     });
 
     gyms.forEach((record) => {
+
       if (record.completed) {
+
         tempGymStreak++;
 
         highestGymStreak = Math.max(
           highestGymStreak,
           tempGymStreak
         );
+
       } else {
+
         tempGymStreak = 0;
+
       }
+
     });
 
     let currentPrayerStreak = 0;
 
-    for (let i = prayers.length - 1; i >= 0; i--) {
+    for (
+      let i = prayers.length - 1;
+      i >= 0;
+      i--
+    ) {
+
       let completed = 0;
 
       if (prayers[i].fajr) completed++;
@@ -211,37 +231,77 @@ exports.getRecords = async (req, res) => {
       if (prayers[i].isha) completed++;
 
       if (completed === 5) {
+
         currentPrayerStreak++;
+
       } else {
+
         break;
+
       }
+
     }
 
     let currentGymStreak = 0;
 
-    for (let i = gyms.length - 1; i >= 0; i--) {
+    for (
+      let i = gyms.length - 1;
+      i >= 0;
+      i--
+    ) {
+
       if (gyms[i].completed) {
+
         currentGymStreak++;
+
       } else {
+
         break;
+
       }
+
     }
 
+    const totalGymDays =
+      gyms.filter(
+        gym => gym.completed
+      ).length;
+
+    const gymCompletionRate =
+      gyms.length > 0
+        ? Math.round(
+            (totalGymDays / gyms.length) * 100
+          )
+        : 0;
+
     res.json({
+
       currentPrayerStreak,
+
       highestPrayerStreak,
+
       currentGymStreak,
+
       highestGymStreak,
+
       totalPrayers,
-      totalGymDays: gyms.filter(
-        (gym) => gym.completed
-      ).length,
+
+      totalGymDays,
+
+      gymCompletionRate
+
     });
-  } catch (error) {
+
+  }
+
+  catch (error) {
+
     console.error(error);
 
     res.status(500).json({
-      error: error.message,
+      error: error.message
     });
+
   }
+
 };
