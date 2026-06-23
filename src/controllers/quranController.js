@@ -98,73 +98,132 @@ error:error.message
 
 }
 
-};exports.getQuranAnalytics =
-async (req,res)=>{
-
-  try{
-
-    res.json({
-
-      currentStreak: 0,
-
-      highestStreak: 0,
-
-      monthMinutes: 0,
-
-      yearMinutes: 0,
-
-      topSurahMonth: "No Data",
-
-      topSurahYear: "No Data"
-
-    });
-
-  }
-
-  catch(error){
-
-    res.status(500).json({
-      error:error.message
-    });
-
-  }
-
 };
-
-exports.getQuranTrend =
+exports.getQuranAnalytics =
 async (req,res)=>{
 
-  try{
+try{
 
-    res.json([]);
+const result =
+await pool.query(
+`
+SELECT *
+FROM quran_records
+ORDER BY reading_date
+`
+);
 
-  }
+const records =
+result.rows;
 
-  catch(error){
+let highestStreak = 0;
+let tempStreak = 0;
 
-    res.status(500).json({
-      error:error.message
-    });
+let totalMinutes =
+0;
 
-  }
+records.forEach(record=>{
 
-};
+totalMinutes +=
+record.minutes_spent;
 
-exports.getSurahProgress =
-async (req,res)=>{
+tempStreak++;
 
-  try{
+highestStreak =
+Math.max(
+highestStreak,
+tempStreak
+);
 
-    res.json([]);
+});
 
-  }
+let currentStreak = 0;
 
-  catch(error){
+for(
+let i =
+records.length-1;
+i>=0;
+i--
+){
 
-    res.status(500).json({
-      error:error.message
-    });
+currentStreak++;
 
-  }
+}
+
+const topSurah =
+records.reduce(
+
+(acc,current)=>{
+
+acc[current.surah_name] =
+(
+acc[current.surah_name]
+|| 0
+)
++
+current.minutes_spent;
+
+return acc;
+
+},
+
+{}
+
+);
+
+let topSurahName =
+"No Data";
+
+let maxMinutes =
+0;
+
+for(
+const surah
+in topSurah
+){
+
+if(
+topSurah[surah]
+>
+maxMinutes
+){
+
+maxMinutes =
+topSurah[surah];
+
+topSurahName =
+surah;
+
+}
+
+}
+
+res.json({
+
+currentStreak,
+
+highestStreak,
+
+totalMinutes,
+
+totalHours:
+(
+totalMinutes/60
+).toFixed(1),
+
+topSurah:
+topSurahName
+
+});
+
+}
+
+catch(error){
+
+res.status(500).json({
+error:error.message
+});
+
+}
 
 };
