@@ -15,20 +15,84 @@ exports.getMonthlyAnalytics = async (req, res) => {
       [year, month]
     );
 
-    const gymResult = await pool.query(
-      `
-      SELECT *
-      FROM gym_record
-      WHERE EXTRACT(YEAR FROM workout_data) = $1
-      AND EXTRACT(MONTH FROM workout_data) = $2
-      ORDER BY workout_data
-      `,
-      [year, month]
-    );
+    const prayers = prayerResult.rows;
+
+    const totalDays = prayers.length;
+
+    if (totalDays === 0) {
+      return res.json({
+        prayerCompletionRate: 0,
+        fajrRate: 0,
+        dhuhrRate: 0,
+        asrRate: 0,
+        maghribRate: 0,
+        ishaRate: 0,
+        totalDays: 0,
+      });
+    }
+
+    let fajrCount = 0;
+    let dhuhrCount = 0;
+    let asrCount = 0;
+    let maghribCount = 0;
+    let ishaCount = 0;
+    let totalCompletedPrayers = 0;
+
+    prayers.forEach((record) => {
+      if (record.fajr) {
+        fajrCount++;
+        totalCompletedPrayers++;
+      }
+
+      if (record.dhuhr) {
+        dhuhrCount++;
+        totalCompletedPrayers++;
+      }
+
+      if (record.asr) {
+        asrCount++;
+        totalCompletedPrayers++;
+      }
+
+      if (record.maghrib) {
+        maghribCount++;
+        totalCompletedPrayers++;
+      }
+
+      if (record.isha) {
+        ishaCount++;
+        totalCompletedPrayers++;
+      }
+    });
+
+    const totalPossiblePrayers = totalDays * 5;
 
     res.json({
-      prayers: prayerResult.rows,
-      gyms: gymResult.rows,
+      prayerCompletionRate: Math.round(
+        (totalCompletedPrayers / totalPossiblePrayers) * 100
+      ),
+
+      fajrRate: Math.round(
+        (fajrCount / totalDays) * 100
+      ),
+
+      dhuhrRate: Math.round(
+        (dhuhrCount / totalDays) * 100
+      ),
+
+      asrRate: Math.round(
+        (asrCount / totalDays) * 100
+      ),
+
+      maghribRate: Math.round(
+        (maghribCount / totalDays) * 100
+      ),
+
+      ishaRate: Math.round(
+        (ishaCount / totalDays) * 100
+      ),
+
+      totalDays,
     });
   } catch (error) {
     console.error(error);
