@@ -20,8 +20,7 @@ memorized
 const result =
 await pool.query(
 
-`
-INSERT INTO quran_records
+`INSERT INTO quran_records
 (
 reading_date,
 surah_number,
@@ -33,8 +32,7 @@ memorized
 )
 VALUES
 ($1,$2,$3,$4,$5,$6,$7)
-RETURNING *
-`,
+RETURNING *`,
 
 [
 readingDate,
@@ -65,6 +63,7 @@ error:error.message
 }
 
 };
+
 exports.getTodayQuran =
 async (req,res)=>{
 
@@ -73,12 +72,10 @@ try{
 const result =
 await pool.query(
 
-`
-SELECT *
+`SELECT *
 FROM quran_records
 ORDER BY reading_date DESC
-LIMIT 1
-`
+LIMIT 1`
 
 );
 
@@ -99,73 +96,227 @@ error:error.message
 }
 
 };
+
 exports.getQuranAnalytics =
 async (req,res)=>{
 
-  try{
+try{
 
-    res.json({
+const result =
+await pool.query(
+`SELECT *
+FROM quran_records
+ORDER BY reading_date`
+);
 
-      currentStreak: 0,
+const records =
+result.rows;
 
-      highestStreak: 0,
+let totalMinutes = 0;
 
-      monthMinutes: 0,
+records.forEach(record=>{
 
-      yearMinutes: 0,
+totalMinutes +=
+record.minutes_spent;
 
-      topSurahMonth: "No Data",
+});
 
-      topSurahYear: "No Data"
+const topSurahMap =
+records.reduce(
 
-    });
+(acc,current)=>{
 
-  }
+acc[current.surah_name] =
+(
+acc[current.surah_name]
+|| 0
+)
++
+current.minutes_spent;
 
-  catch(error){
+return acc;
 
-    res.status(500).json({
-      error:error.message
-    });
+},
 
-  }
+{}
+
+);
+
+let topSurah =
+"No Data";
+
+let maxMinutes = 0;
+
+for(
+const surah
+in topSurahMap
+){
+
+if(
+topSurahMap[surah]
+
+>
+
+maxMinutes
+){
+
+maxMinutes =
+topSurahMap[surah];
+
+topSurah =
+surah;
+
+}
+
+}
+
+res.json({
+
+currentStreak:
+records.length,
+
+highestStreak:
+records.length,
+
+totalMinutes,
+
+totalHours:
+(
+totalMinutes/60
+).toFixed(1),
+
+topSurah
+
+});
+
+}
+
+catch(error){
+
+console.error(error);
+
+res.status(500).json({
+error:error.message
+});
+
+}
 
 };
 
 exports.getQuranTrend =
 async (req,res)=>{
 
-  try{
+try{
 
-    res.json([]);
+const {
+year,
+month
+} = req.params;
 
-  }
+const result =
+await pool.query(
 
-  catch(error){
+`SELECT
+reading_date,
+minutes_spent
+FROM quran_records
+WHERE
+EXTRACT(YEAR FROM reading_date)=$1
+AND
+EXTRACT(MONTH FROM reading_date)=$2
+ORDER BY reading_date`,
 
-    res.status(500).json({
-      error:error.message
-    });
+[
+year,
+month
+]
 
-  }
+);
+
+const trend =
+result.rows.map(
+record=>({
+
+date:
+record.reading_date
+.toISOString()
+.split("T")[0],
+
+minutes:
+record.minutes_spent
+
+})
+);
+
+res.json(
+trend
+);
+
+}
+
+catch(error){
+
+console.error(error);
+
+res.status(500).json({
+error:error.message
+});
+
+}
 
 };
 
 exports.getSurahProgress =
 async (req,res)=>{
 
-  try{
+try{
 
-    res.json([]);
+const result =
+await pool.query(
 
-  }
+`
+SELECT
 
-  catch(error){
+surah_number,
+surah_name,
 
-    res.status(500).json({
-      error:error.message
-    });
+MAX(perfection_rate)
+AS perfection_rate,
 
-  }
+BOOL_OR(meaning_learned)
+AS meaning_learned,
+
+BOOL_OR(memorized)
+AS memorized
+
+FROM quran_records
+
+GROUP BY
+
+surah_number,
+surah_name
+
+ORDER BY
+
+surah_number
+`
+
+);
+
+res.json(
+result.rows
+);
+
+}
+
+catch(error){
+
+console.error(error);
+
+res.status(500).json({
+error:error.message
+});
+
+}
 
 };
